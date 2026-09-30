@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { assertRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ORDER_STATUSES, type OrderStatus } from "@/lib/domain/constants";
+import { rupees } from "@/lib/money";
 import { counterSaleSchema, firstError, topUpSchema } from "@/lib/validation";
 import { audit } from "@/server/audit";
 import { messageFor, UserFacingError } from "@/server/errors";
@@ -89,7 +90,7 @@ export async function counterTopUp(input: { query: string; amount: number }): Pr
         action: "wallet.topup",
         entity: "User",
         entityId: account.id,
-        detail: `${parsed.data.amountPaise} cash for ${account.rollNo ?? account.email}`,
+        detail: `${rupees(parsed.data.amountPaise)} cash for ${account.rollNo ?? account.email}`,
       });
       return after;
     });

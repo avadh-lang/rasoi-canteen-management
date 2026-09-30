@@ -6,6 +6,7 @@ import { canTransition, refundOnCancel, timestampFieldFor } from "@/lib/domain/o
 import { quote, type CartLine, type PricedItem } from "@/lib/domain/pricing";
 import { upcomingSlots } from "@/lib/domain/slots";
 import { businessDate, istMidnight } from "@/lib/domain/time";
+import { rupees } from "@/lib/money";
 import { audit } from "./audit";
 import { UserFacingError } from "./errors";
 import { creditWallet, debitWallet, mockUpiRef } from "./wallet";
@@ -116,7 +117,7 @@ async function placeOnce(input: PlaceOrderInput) {
       action: "order.placed",
       entity: "Order",
       entityId: order.id,
-      detail: `#${token} · ${input.channel} · ${input.paymentMethod} · ${q.totalPaise}`,
+      detail: `#${token}, ${input.channel.toLowerCase()}, ${rupees(q.totalPaise)} by ${input.paymentMethod.toLowerCase()}`,
     });
     return order;
   });
@@ -170,7 +171,7 @@ export async function changeStatus(orderId: string, to: OrderStatus, actor: { id
       action: `order.${to.toLowerCase()}`,
       entity: "Order",
       entityId: orderId,
-      detail: `#${order.token} ${from} → ${to}${refund !== "NONE" ? ` · refund ${refund}` : ""}`,
+      detail: `#${order.token}${refund === "WALLET" ? `, ${rupees(order.totalPaise)} refunded to wallet` : refund === "CASH_AT_COUNTER" ? ", refund cash at counter" : ""}`,
     });
     return { token: order.token, refund };
   });

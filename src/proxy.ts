@@ -1,38 +1,21 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { ROLE_HOME, type Role } from "./lib/domain/constants";
 import { readSession, SESSION_COOKIE } from "./lib/session-token";
 
-// Optimistic route guard. Pages and actions still re-check against the database.
-const AREAS: { prefix: string; roles: Role[] }[] = [
-  { prefix: "/admin", roles: ["ADMIN"] },
-  { prefix: "/kitchen", roles: ["KITCHEN", "ADMIN"] },
-  { prefix: "/counter", roles: ["CASHIER", "ADMIN"] },
-  { prefix: "/menu", roles: ["CUSTOMER"] },
-  { prefix: "/checkout", roles: ["CUSTOMER"] },
-  { prefix: "/orders", roles: ["CUSTOMER"] },
-  { prefix: "/wallet", roles: ["CUSTOMER"] },
-];
+// Optimistic gate: bounce signed-out visitors to sign-in before rendering.
+// Role checks live in each area's layout, which reads the role from the
+// database, so a role change or deactivation applies on the very next request.
+const PROTECTED = ["/admin", "/kitchen", "/counter", "/menu", "/checkout", "/orders", "/wallet"];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  if (!PROTECTED.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return NextResponse.next();
+
   const session = await readSession(request.cookies.get(SESSION_COOKIE)?.value);
+  if (session) return NextResponse.next();
 
-  if (pathname === "/login" || pathname === "/register") {
-    return session ? NextResponse.redirect(new URL(ROLE_HOME[session.role], request.url)) : NextResponse.next();
-  }
-
-  const area = AREAS.find((a) => pathname === a.prefix || pathname.startsWith(`${a.prefix}/`));
-  if (!area) return NextResponse.next();
-
-  if (!session) {
-    const url = new URL("/login", request.url);
-    url.searchParams.set("next", pathname);
-    return NextResponse.redirect(url);
-  }
-  if (!area.roles.includes(session.role)) {
-    return NextResponse.redirect(new URL(ROLE_HOME[session.role], request.url));
-  }
-  return NextResponse.next();
+  const url = new URL("/login", request.url);
+  url.searchParams.set("next", pathname);
+  return NextResponse.redirect(url);
 }
 
 export const config = {

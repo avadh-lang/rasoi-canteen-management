@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { assertRole } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { rupees } from "@/lib/money";
 import { checkoutSchema, firstError, topUpSchema } from "@/lib/validation";
 import { audit } from "@/server/audit";
 import { messageFor } from "@/server/errors";
@@ -55,7 +56,7 @@ export async function topUpMyWallet(input: unknown): Promise<Result<{ balance: n
     const reference = mockUpiRef();
     const balance = await db.$transaction(async (tx) => {
       const after = await creditWallet(tx, user.id, parsed.data.amountPaise, "TOPUP", `UPI top-up (${reference})`);
-      await audit(tx, { actorId: user.id, action: "wallet.topup", entity: "User", entityId: user.id, detail: `${parsed.data.amountPaise} via UPI` });
+      await audit(tx, { actorId: user.id, action: "wallet.topup", entity: "User", entityId: user.id, detail: `${rupees(parsed.data.amountPaise)} by UPI` });
       return after;
     });
     revalidatePath("/", "layout");

@@ -35,7 +35,7 @@ export function MenuBoard({ categories, notice }: { categories: Category[]; noti
   }, [categories, query, vegOnly]);
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[180px_1fr_340px]">
+    <div className="grid gap-8 pb-24 lg:grid-cols-[180px_1fr_340px] lg:pb-0">
       {/* Category rail */}
       <nav aria-label="Menu sections" className="hidden lg:block">
         <ul className="sticky top-28 space-y-1">
