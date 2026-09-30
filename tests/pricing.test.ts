@@ -77,6 +77,8 @@ describe("money", () => {
   it("formats paise as rupees", () => {
     expect(rupees(1800)).toBe("₹18");
     expect(rupees(9555)).toBe("₹95.55");
+    expect(rupees(6930)).toBe("₹69.30");
+    expect(rupees(-1800)).toBe("-₹18");
   });
   it("parses rupee input", () => {
     expect(toPaise("45.5")).toBe(4550);
