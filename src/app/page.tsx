@@ -1,68 +1,102 @@
-import Image from "next/image";
+import Link from "next/link";
+import { LiveRefresh } from "@/components/live-refresh";
+import { Wordmark } from "@/components/marks";
+import { getCurrentUser } from "@/lib/auth";
+import { db, getSettings } from "@/lib/db";
+import { ROLE_HOME } from "@/lib/domain/constants";
+import { isOpenNow } from "@/lib/domain/slots";
+import { businessDate, minuteLabel } from "@/lib/domain/time";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const [user, settings, ready, cooking] = await Promise.all([
+    getCurrentUser(),
+    getSettings(),
+    db.order.findMany({
+      where: { businessDate: businessDate(), status: "READY" },
+      orderBy: { readyAt: "desc" },
+      select: { token: true },
+      take: 8,
+    }),
+    db.order.count({ where: { businessDate: businessDate(), status: { in: ["PLACED", "PREPARING"] } } }),
+  ]);
+  const open = isOpenNow(new Date(), settings);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
+    <div className="flex min-h-dvh flex-col">
+      <header className="mx-auto flex w-full max-w-[1200px] items-center gap-4 px-4 py-5 sm:px-6">
+        <Wordmark />
+        <span className={`chip ${open ? "bg-leaf-soft" : "bg-chilli-soft"}`}>
+          {open ? "Open now" : "Closed"}, {minuteLabel(settings.openMinute)} to {minuteLabel(settings.closeMinute)}
+        </span>
+        <div className="ml-auto">
+          {user ? (
+            <Link href={ROLE_HOME[user.role]} className="btn btn-sm btn-ink">Go to my dashboard</Link>
+          ) : (
+            <Link href="/login" className="btn btn-sm">Sign in</Link>
+          )}
+        </div>
+      </header>
+
+      <main className="mx-auto grid w-full max-w-[1200px] flex-1 items-center gap-12 px-4 pt-6 pb-16 sm:px-6 lg:grid-cols-[1.1fr_1fr]">
+        <section>
+          <p className="font-bold">VCET canteen, Vasai</p>
+          <h1 className="display mt-3 text-[3.4rem] sm:text-[5.2rem]">
+            Order ahead.
+            <br />
+            Skip the line.
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="mt-6 max-w-md text-lg">
+            Pick your food and a pickup time between lectures. Pay from your canteen wallet, then collect when your
+            token shows up on the board.
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link href={user ? ROLE_HOME[user.role] : "/register"} className="btn btn-primary btn-lg">
+              {user ? "Open Rasoi" : "Create student account"}
+            </Link>
+            {!user && (
+              <Link href="/login" className="btn btn-lg">
+                Sign in
+              </Link>
+            )}
+          </div>
+
+          <ol className="mt-12 grid max-w-xl gap-4 sm:grid-cols-3">
+            {[
+              ["Pick", "Browse today's menu and fill your tray."],
+              ["Pay", "Wallet or UPI. You get a token number."],
+              ["Collect", "Walk up when your token turns green."],
+            ].map(([title, body], i) => (
+              <li key={title} className="border-l-[3px] border-ink pl-3">
+                <span className="display nums text-2xl">{i + 1}</span>
+                <p className="mt-1 font-extrabold">{title}</p>
+                <p className="text-sm text-muted">{body}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        {/* The counter display board, as seen above the pickup window. */}
+        <section aria-labelledby="board" className="panel shadow-hard-lg">
+          <div className="flex items-center justify-between border-b-[3px] border-ink bg-ink px-5 py-3 text-paper">
+            <h2 id="board" className="display text-xl">Now serving</h2>
+            <LiveRefresh everyMs={8000} />
+          </div>
+          <div className="grid min-h-64 auto-rows-min grid-cols-2 content-start gap-3 bg-leaf-soft p-5 sm:grid-cols-4">
+            {ready.length === 0 && (
+              <p className="col-span-full self-center text-center font-bold">No tokens waiting at the counter.</p>
+            )}
+            {ready.map((o) => (
+              <div key={o.token} className="grid place-items-center border-[3px] border-ink bg-paper py-4 shadow-hard-sm">
+                <span className="display nums text-4xl">{o.token}</span>
+              </div>
+            ))}
+          </div>
+          <p className="border-t-[3px] border-ink px-5 py-3 text-sm font-bold">
+            {cooking === 0 ? "Kitchen is clear." : `${cooking} ${cooking === 1 ? "order" : "orders"} on the stove.`}
+          </p>
+        </section>
       </main>
     </div>
   );

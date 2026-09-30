@@ -1,26 +1,210 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --color-ink: #000000;
+  --color-tile: #d8eee8;
+  --color-tile-line: #bfe0d7;
+  --color-paper: #ffffff;
+  --color-turmeric: #ffc21a;
+  --color-turmeric-soft: #ffe9a8;
+  --color-chilli: #ff5436;
+  --color-chilli-soft: #ffd6cc;
+  --color-leaf: #169b48;
+  --color-leaf-soft: #b9f0cb;
+  --color-nonveg: #a0391e;
+  --color-steel: #c9d1d3;
+  --color-muted: #3d4a4f;
+
+  --font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+
+  --shadow-hard: 4px 4px 0 0 #000;
+  --shadow-hard-lg: 7px 7px 0 0 #000;
+  --shadow-hard-sm: 2px 2px 0 0 #000;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html {
+    color-scheme: light;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background-color: var(--color-tile);
+    /* Canteen wall tiles: a faint 44px grid. */
+    background-image:
+      linear-gradient(var(--color-tile-line) 1.5px, transparent 1.5px),
+      linear-gradient(90deg, var(--color-tile-line) 1.5px, transparent 1.5px);
+    background-size: 44px 44px;
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-variation-settings: "wdth" 100;
+    font-feature-settings: "tnum" 0;
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-ink);
+    outline-offset: 3px;
+    box-shadow: 0 0 0 6px var(--color-turmeric);
+  }
+  ::selection {
+    background: var(--color-turmeric);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  /* Expanded black display type — the voice of the signboard. */
+  .display {
+    font-stretch: 125%;
+    font-variation-settings: "wdth" 125;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    line-height: 0.95;
+  }
+  .condensed {
+    font-variation-settings: "wdth" 75;
+  }
+  .nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .panel {
+    background: var(--color-paper);
+    border: 3px solid var(--color-ink);
+    box-shadow: var(--shadow-hard);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0.5rem 1.1rem;
+    border: 3px solid var(--color-ink);
+    border-radius: 999px;
+    font-weight: 800;
+    background: var(--color-paper);
+    box-shadow: var(--shadow-hard-sm);
+    transition: transform 80ms ease, box-shadow 80ms ease, background-color 120ms ease;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn:hover:not(:disabled) {
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 0 #000;
+  }
+  .btn:active:not(:disabled) {
+    transform: translate(2px, 2px);
+    box-shadow: 0 0 0 0 #000;
+  }
+  .btn:disabled {
+    cursor: not-allowed;
+    background: var(--color-steel);
+    color: var(--color-muted);
+    box-shadow: none;
+  }
+  .btn-primary {
+    background: var(--color-turmeric);
+  }
+  .btn-go {
+    background: var(--color-leaf);
+    color: #fff;
+  }
+  .btn-danger {
+    background: var(--color-chilli);
+  }
+  .btn-ink {
+    background: var(--color-ink);
+    color: #fff;
+    box-shadow: 2px 2px 0 0 var(--color-turmeric);
+  }
+  .btn-sm {
+    min-height: 2.25rem;
+    padding: 0.25rem 0.8rem;
+    font-size: 0.875rem;
+  }
+  .btn-lg {
+    min-height: 3.5rem;
+    padding: 0.75rem 1.6rem;
+    font-size: 1.125rem;
+  }
+
+  .field {
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.5rem 0.75rem;
+    border: 3px solid var(--color-ink);
+    background: var(--color-paper);
+    font-weight: 500;
+  }
+  .field:focus {
+    outline: none;
+    background: #fffbea;
+    box-shadow: var(--shadow-hard-sm);
+  }
+  .label {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-weight: 800;
+    font-size: 0.9rem;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.1rem 0.6rem;
+    border: 2px solid var(--color-ink);
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    background: var(--color-paper);
+    color: var(--color-ink);
+    white-space: nowrap;
+  }
+
+  /* Perforated edge used by the token stub and kitchen tickets. */
+  .perforated-x {
+    background-image: radial-gradient(circle, var(--color-ink) 2px, transparent 2.5px);
+    background-size: 12px 6px;
+    background-repeat: repeat-x;
+    height: 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes token-drop {
+  0% {
+    transform: translateY(-24px) rotate(-6deg);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(4px) rotate(-1.5deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+}
+.token-drop {
+  animation: token-drop 520ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+@keyframes ready-pulse {
+  0%,
+  100% {
+    box-shadow: 7px 7px 0 0 #000;
+  }
+  50% {
+    box-shadow: 7px 7px 0 0 #000, 0 0 0 8px var(--color-leaf-soft);
+  }
+}
+.ready-pulse {
+  animation: ready-pulse 1.6s ease-in-out infinite;
 }

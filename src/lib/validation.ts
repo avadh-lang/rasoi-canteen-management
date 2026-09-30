@@ -47,12 +47,15 @@ const rupeeAmount = z.coerce
   .positive("Enter an amount above zero.")
   .transform((n) => Math.round(n * 100));
 
-export const topUpSchema = z.object({
-  amountPaise: rupeeAmount.refine(
-    (p) => p >= LIMITS.minTopUpPaise && p <= LIMITS.maxTopUpPaise,
-    `Top up between ₹${LIMITS.minTopUpPaise / 100} and ₹${LIMITS.maxTopUpPaise / 100}.`,
-  ),
-});
+/** Takes rupees from the form, hands back paise. */
+export const topUpSchema = z
+  .object({
+    amount: rupeeAmount.refine(
+      (p) => p >= LIMITS.minTopUpPaise && p <= LIMITS.maxTopUpPaise,
+      `Top up between ₹${LIMITS.minTopUpPaise / 100} and ₹${LIMITS.maxTopUpPaise / 100}.`,
+    ),
+  })
+  .transform((o) => ({ amountPaise: o.amount }));
 
 export const menuItemSchema = z.object({
   name: z.string().trim().min(2, "Name the dish.").max(60),

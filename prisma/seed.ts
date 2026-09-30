@@ -135,7 +135,7 @@ async function main() {
     const amount = pick([300, 500, 500, 800, 1000]) * 100;
     balances.set(st.id, amount);
     await db.walletTxn.create({
-      data: { userId: st.id, type: "TOPUP", amountPaise: amount, balanceAfter: amount, reference: "Opening top-up · UPI", createdAt: istMidnight(addDays(today, -8)) },
+      data: { userId: st.id, type: "TOPUP", amountPaise: amount, balanceAfter: amount, reference: "Opening top-up by UPI", createdAt: istMidnight(addDays(today, -8)) },
     });
   }
 
@@ -165,8 +165,16 @@ async function main() {
 
       const online = rand() < 0.6;
       const student = online ? pick(students) : null;
-      let method = online ? (rand() < 0.65 ? "WALLET" : "UPI") : pick(["CASH", "CASH", "UPI"]);
-      if (method === "WALLET" && (balances.get(student!.id) ?? 0) < total) method = "UPI";
+      const method = online ? (rand() < 0.65 ? "WALLET" : "UPI") : pick(["CASH", "CASH", "UPI"]);
+      // Students top up by UPI when the wallet runs low, like they do in real life.
+      if (method === "WALLET" && (balances.get(student!.id) ?? 0) < total + 150_00) {
+        const amount = pick([300, 500, 500, 1000]) * 100;
+        const after = balances.get(student!.id)! + amount;
+        balances.set(student!.id, after);
+        await db.walletTxn.create({
+          data: { userId: student!.id, type: "TOPUP", amountPaise: amount, balanceAfter: after, reference: "UPI top-up", createdAt: new Date(placedAt.getTime() - 30 * 60_000) },
+        });
+      }
 
       const token = (tokens.get(dateKey) ?? 100) + 1;
       tokens.set(dateKey, token);
