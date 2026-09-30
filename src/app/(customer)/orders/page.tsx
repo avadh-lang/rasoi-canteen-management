@@ -16,7 +16,7 @@ const dateFmt = new Intl.DateTimeFormat("en-IN", { weekday: "short", day: "numer
 export default async function OrdersPage() {
   const user = await requireUser("CUSTOMER");
   const orders = await db.order.findMany({
-    where: { userId: user.id },
+    where: { OR: [{ userId: user.id }, { group: { members: { some: { userId: user.id } } } }] },
     orderBy: { placedAt: "desc" },
     take: 50,
     include: { items: { select: { name: true, qty: true } } },

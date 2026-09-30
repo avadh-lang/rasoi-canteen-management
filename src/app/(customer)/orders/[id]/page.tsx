@@ -30,14 +30,24 @@ export default async function OrderPage({
   searchParams: Promise<{ placed?: string }>;
 }) {
   const [{ id }, { placed }, user] = await Promise.all([params, searchParams, requireUser("CUSTOMER")]);
-  const order = await db.order.findUnique({ where: { id }, include: { items: true } });
-  if (!order || order.userId !== user.id) notFound();
+  const order = await db.order.findUnique({
+    where: { id },
+    include: {
+      items: true,
+      group: { include: { members: { orderBy: { joinedAt: "asc" }, include: { user: { select: { name: true } } } } } },
+    },
+  });
+  const seat = order?.group?.members.find((m) => m.userId === user.id);
+  if (!order || (order.userId !== user.id && !seat)) notFound();
+  const isHost = order.userId === user.id;
+  const myShare = seat?.sharePaise ?? order.totalPaise;
+  const hostFirst = order.group?.members.find((m) => m.userId === order.userId)?.user.name.split(" ")[0];
 
   const status = order.status as OrderStatus;
   const live = !isTerminal(status);
 
   const detail: Record<OrderStatus, string> = {
-    PLACED: `The kitchen has your order for ${order.pickupSlot ? timeLabel(order.pickupSlot) : "pickup"}. You can still cancel until they start cooking.`,
+    PLACED: `The kitchen has your order for ${order.pickupSlot ? timeLabel(order.pickupSlot) : "pickup"}. ${isHost ? "You can still cancel until they start cooking." : `${hostFirst} can cancel it until cooking starts.`}`,
     PREPARING: "The cooks are on it. We'll turn your token green when it's at the counter.",
     READY: "Your food is waiting at the pickup counter. Show this token.",
     COLLECTED: `Collected at ${order.collectedAt ? timeLabel(order.collectedAt) : "the counter"}.`,
@@ -45,7 +55,7 @@ export default async function OrderPage({
       order.paymentStatus === "REFUNDED"
         ? order.paymentMethod === "CASH"
           ? "Collect your cash refund at the counter."
-          : `${rupees(order.totalPaise)} is back in your wallet.`
+          : `${rupees(myShare)} is back in your wallet.`
         : "No payment was taken.",
   };
 
@@ -99,7 +109,21 @@ export default async function OrderPage({
             {order.note && <p className="border-t-[3px] border-ink px-5 py-3 text-sm"><span className="font-bold">Kitchen note:</span> {order.note}</p>}
           </section>
 
-          {status === "PLACED" && <CancelOrderButton orderId={order.id} totalPaise={order.totalPaise} />}
+          {order.group && (
+            <section className="panel" aria-labelledby="split-h">
+              <h2 id="split-h" className="border-b-[3px] border-ink px-5 py-3 font-black">Table {order.group.code}: who paid what</h2>
+              <ul className="divide-y-2 divide-dashed divide-ink">
+                {order.group.members.filter((m) => m.sharePaise).map((m) => (
+                  <li key={m.id} className={`nums flex justify-between px-5 py-2.5 ${m.userId === user.id ? "bg-turmeric-soft font-black" : ""}`}>
+                    <span>{m.userId === user.id ? "You" : m.user.name}{m.userId === order.userId ? " (host)" : ""}</span>
+                    <span>{rupees(m.sharePaise!)} from wallet</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {status === "PLACED" && isHost && <CancelOrderButton orderId={order.id} totalPaise={order.totalPaise} group={!!order.group} />}
         </div>
       </div>
     </div>

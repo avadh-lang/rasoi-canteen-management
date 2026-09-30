@@ -27,3 +27,10 @@ Run against a fresh `npm run db:reset`. Record Pass/Fail and the tester's name f
 | UAT-21 | Manager | Role change | People → change a student to Kitchen | That user's next click lands them on the kitchen board |
 | UAT-22 | Manager | Export | Overview → Download 7-day CSV | CSV opens in Excel with one row per order line |
 | UAT-23 | Any | Access control | Student visits `/admin` or `/api/admin/export` | Redirected to menu / 403 |
+| UAT-24 | Student | Join a table | Aarav → Table order → type `VADA` | Sees Diya's and Rohan's plates live |
+| UAT-25 | Student | Split share | Aarav adds 2 vada pav | His share shows ₹37.80 (₹36 + 5% GST) |
+| UAT-26 | Host | Blocked until all in | Diya tries to place while Rohan is choosing | "Waiting for Rohan to tap I'm in" |
+| UAT-27 | Host | Place table order | Everyone in → Diya picks slot → Place | One token; each wallet charged only its own share |
+| UAT-28 | Host | Friend can't pay | A member's wallet is below their share | Nobody is charged; message names who must top up |
+| UAT-29 | Host | Cancel table order | Diya cancels before cooking | Each member refunded their own share |
+| UAT-30 | Guest | Guest can't cancel | Aarav opens the table's order | No cancel button; says the host can cancel |

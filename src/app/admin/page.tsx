@@ -157,6 +157,8 @@ const VERBS: Record<string, string> = {
   "auth.login": "signed in",
   "auth.register": "created an account",
   "system.seeded": "loaded demo data",
+  "table.opened": "started a table",
+  "table.closed": "closed a table",
 };
 function describe(action: string) {
   return VERBS[action] ?? action;

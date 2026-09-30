@@ -89,9 +89,12 @@ async function main() {
   console.log("Clearing tables…");
   await db.$transaction([
     db.auditLog.deleteMany(),
+    db.groupLine.deleteMany(),
+    db.groupMember.deleteMany(),
     db.walletTxn.deleteMany(),
     db.orderItem.deleteMany(),
     db.order.deleteMany(),
+    db.groupOrder.deleteMany(),
     db.menuItem.deleteMany(),
     db.category.deleteMany(),
     db.user.deleteMany(),
@@ -232,6 +235,25 @@ async function main() {
 
   for (const [id, balance] of balances) await db.user.update({ where: { id }, data: { walletBalance: balance } });
 
+  // A table already in progress, so the demo can show joining with a code.
+  const [diya, rohan] = [students[1], students[2]];
+  const byName = (n: string) => items.find((i) => i.name === n)!.id;
+  await db.groupOrder.create({
+    data: {
+      code: "VADA",
+      hostId: diya.id,
+      members: { create: [{ userId: diya.id, ready: true }, { userId: rohan.id }] },
+      lines: {
+        create: [
+          { userId: diya.id, menuItemId: byName("Masala dosa"), qty: 1 },
+          { userId: diya.id, menuItemId: byName("Filter coffee"), qty: 1 },
+          { userId: rohan.id, menuItemId: byName("Chicken biryani"), qty: 1 },
+          { userId: rohan.id, menuItemId: byName("Masala chaas"), qty: 1 },
+        ],
+      },
+    },
+  });
+
   await db.auditLog.create({ data: { actorId: admin.id, action: "system.seeded", entity: "System", detail: "Demo data loaded" } });
 
   console.log(`\nDone. Every demo account uses the password "${DEMO_PASSWORD}":`);
@@ -239,6 +261,7 @@ async function main() {
   console.log("  kitchen@rasoi.test   Kitchen");
   console.log("  counter@rasoi.test   Counter");
   console.log("  aarav@student.test   Student (+5 more)");
+  console.log('\nOpen table order "VADA" is waiting for friends to join.');
 }
 
 main()

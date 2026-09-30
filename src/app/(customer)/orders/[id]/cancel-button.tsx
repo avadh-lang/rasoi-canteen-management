@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { cancelMyOrder } from "@/app/actions/customer";
 import { rupees } from "@/lib/money";
 
-export function CancelOrderButton({ orderId, totalPaise }: { orderId: string; totalPaise: number }) {
+export function CancelOrderButton({ orderId, totalPaise, group = false }: { orderId: string; totalPaise: number; group?: boolean }) {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +20,7 @@ export function CancelOrderButton({ orderId, totalPaise }: { orderId: string; to
   }
   return (
     <div className="space-y-3 border-[3px] border-ink bg-chilli-soft p-4">
-      <p className="font-bold">Cancel this order? {rupees(totalPaise)} goes back to your wallet straight away.</p>
+      <p className="font-bold">{group ? "Cancel for the whole table? Everyone gets their own share back in their wallet straight away." : `Cancel this order? ${rupees(totalPaise)} goes back to your wallet straight away.`}</p>
       {error && <p role="alert" className="text-sm font-bold">{error}</p>}
       <div className="flex gap-3">
         <button

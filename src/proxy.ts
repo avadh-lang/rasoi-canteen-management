@@ -4,7 +4,7 @@ import { readSession, SESSION_COOKIE } from "./lib/session-token";
 // Optimistic gate: bounce signed-out visitors to sign-in before rendering.
 // Role checks live in each area's layout, which reads the role from the
 // database, so a role change or deactivation applies on the very next request.
-const PROTECTED = ["/admin", "/kitchen", "/counter", "/menu", "/checkout", "/orders", "/wallet"];
+const PROTECTED = ["/admin", "/kitchen", "/counter", "/menu", "/checkout", "/orders", "/wallet", "/group"];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

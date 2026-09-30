@@ -22,7 +22,7 @@ export type PlaceOrderInput = {
   note: string;
 };
 
-async function catalogFor(tx: Tx, lines: CartLine[]) {
+export async function catalogFor(tx: Tx, lines: CartLine[]) {
   const items = await tx.menuItem.findMany({ where: { id: { in: lines.map((l) => l.menuItemId) } } });
   return new Map<string, PricedItem>(items.map((i) => [i.id, i]));
 }
@@ -38,9 +38,37 @@ export async function slotBookings(tx: Tx | typeof db, now = new Date()) {
   return new Map(rows.filter((r) => r.pickupSlot).map((r) => [r.pickupSlot!.getTime(), r._count._all]));
 }
 
-async function nextToken(tx: Tx, dateKey: string) {
+export async function nextToken(tx: Tx, dateKey: string) {
   const last = await tx.order.findFirst({ where: { businessDate: dateKey }, orderBy: { token: "desc" }, select: { token: true } });
   return (last?.token ?? 100) + 1;
+}
+
+/** Throws unless `slot` is still bookable for an order needing `prepMinutes`. */
+export async function assertSlot(
+  tx: Tx,
+  now: Date,
+  settings: Awaited<ReturnType<typeof getSettings>>,
+  prepMinutes: number,
+  slot: Date | null,
+) {
+  if (!slot) throw new UserFacingError("Pick a pickup time.");
+  const slots = upcomingSlots(now, settings, prepMinutes, await slotBookings(tx, now));
+  const chosen = slots.find((s) => s.startsAt.getTime() === slot.getTime());
+  if (!chosen) throw new UserFacingError("That pickup time has passed or is too soon for this order. Pick another.");
+  if (chosen.full) throw new UserFacingError(`${chosen.label} just filled up. Pick another time.`);
+}
+
+/** Reserve stock; the WHERE guard stops overselling under concurrent orders. */
+export async function reserveStock(tx: Tx, lines: CartLine[], catalog: Map<string, PricedItem>) {
+  for (const line of lines) {
+    const item = catalog.get(line.menuItemId)!;
+    if (item.stock === null) continue;
+    const { count } = await tx.menuItem.updateMany({
+      where: { id: line.menuItemId, stock: { gte: line.qty } },
+      data: { stock: { decrement: line.qty } },
+    });
+    if (count === 0) throw new UserFacingError(`${item.name} sold out while you were ordering.`);
+  }
 }
 
 async function placeOnce(input: PlaceOrderInput) {
@@ -52,23 +80,8 @@ async function placeOnce(input: PlaceOrderInput) {
     const catalog = await catalogFor(tx, input.lines);
     const q = quote(input.lines, catalog, settings.taxBasisPoints);
 
-    if (input.channel === "ONLINE") {
-      if (!input.pickupSlot) throw new UserFacingError("Pick a pickup time.");
-      const slots = upcomingSlots(now, settings, q.prepMinutes, await slotBookings(tx, now));
-      const chosen = slots.find((s) => s.startsAt.getTime() === input.pickupSlot!.getTime());
-      if (!chosen) throw new UserFacingError("That pickup time has passed or is too soon for this order. Pick another.");
-      if (chosen.full) throw new UserFacingError(`${chosen.label} just filled up. Pick another time.`);
-    }
-
-    // Reserve stock; the WHERE guard stops overselling under concurrent orders.
-    for (const line of q.lines) {
-      if (catalog.get(line.menuItemId)!.stock === null) continue;
-      const { count } = await tx.menuItem.updateMany({
-        where: { id: line.menuItemId, stock: { gte: line.qty } },
-        data: { stock: { decrement: line.qty } },
-      });
-      if (count === 0) throw new UserFacingError(`${line.name} sold out while you were ordering.`);
-    }
+    if (input.channel === "ONLINE") await assertSlot(tx, now, settings, q.prepMinutes, input.pickupSlot);
+    await reserveStock(tx, q.lines, catalog);
 
     const dateKey = businessDate(now);
     const token = await nextToken(tx, dateKey);
@@ -162,7 +175,15 @@ export async function changeStatus(orderId: string, to: OrderStatus, actor: { id
         });
       }
       refund = refundOnCancel({ ...order, hasAccount: order.userId !== null });
-      if (refund === "WALLET") await creditWallet(tx, order.userId!, order.totalPaise, "REFUND", `Order #${order.token} cancelled`);
+      if (refund === "WALLET" && order.groupId) {
+        // Table orders: everyone gets their own share back.
+        const seats = await tx.groupMember.findMany({ where: { groupId: order.groupId, sharePaise: { gt: 0 } } });
+        for (const seat of seats) {
+          await creditWallet(tx, seat.userId, seat.sharePaise!, "REFUND", `Table order #${order.token} cancelled (your share)`);
+        }
+      } else if (refund === "WALLET") {
+        await creditWallet(tx, order.userId!, order.totalPaise, "REFUND", `Order #${order.token} cancelled`);
+      }
       if (refund !== "NONE") await tx.order.update({ where: { id: orderId }, data: { paymentStatus: "REFUNDED" } });
     }
 

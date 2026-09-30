@@ -13,18 +13,21 @@ datasource db {
 }
 
 model User {
-  id            String      @id @default(cuid())
+  id            String        @id @default(cuid())
   name          String
-  email         String      @unique
-  rollNo        String?     @unique
+  email         String        @unique
+  rollNo        String?       @unique
   passwordHash  String
-  role          String      @default("CUSTOMER") // CUSTOMER | KITCHEN | CASHIER | ADMIN
-  walletBalance Int         @default(0)
-  active        Boolean     @default(true)
-  createdAt     DateTime    @default(now())
-  orders        Order[]     @relation("customerOrders")
-  handled       Order[]     @relation("handledOrders")
-  walletTxns    WalletTxn[] @relation("walletOwner")
+  role          String        @default("CUSTOMER") // CUSTOMER | KITCHEN | CASHIER | ADMIN
+  walletBalance Int           @default(0)
+  active        Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  orders        Order[]       @relation("customerOrders")
+  hostedGroups  GroupOrder[]
+  groupSeats    GroupMember[]
+  groupLines    GroupLine[]
+  handled       Order[]       @relation("handledOrders")
+  walletTxns    WalletTxn[]   @relation("walletOwner")
   auditLogs     AuditLog[]
 }
 
@@ -47,6 +50,7 @@ model MenuItem {
   categoryId  String
   category    Category    @relation(fields: [categoryId], references: [id])
   orderItems  OrderItem[]
+  groupLines  GroupLine[]
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
@@ -72,6 +76,8 @@ model Order {
   paymentStatus String      @default("PAID") // PAID | REFUNDED
   paymentRef    String?
   note          String      @default("")
+  groupId       String?     @unique
+  group         GroupOrder? @relation(fields: [groupId], references: [id])
   items         OrderItem[]
   placedAt      DateTime    @default(now())
   preparingAt   DateTime?
@@ -136,4 +142,44 @@ model CanteenSettings {
   slotCapacity    Int     @default(20)
   acceptingOrders Boolean @default(true)
   taxBasisPoints  Int     @default(500) // 5% GST on canteen food
+}
+
+// A table order: friends share a code, each adds their own dishes and
+// pays their own share from their wallet. Placed as one kitchen order.
+model GroupOrder {
+  id        String        @id @default(cuid())
+  code      String        @unique
+  hostId    String
+  host      User          @relation(fields: [hostId], references: [id])
+  status    String        @default("OPEN") // OPEN | PLACED | DISBANDED
+  createdAt DateTime      @default(now())
+  members   GroupMember[]
+  lines     GroupLine[]
+  order     Order?
+}
+
+model GroupMember {
+  id         String     @id @default(cuid())
+  groupId    String
+  group      GroupOrder @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User       @relation(fields: [userId], references: [id])
+  ready      Boolean    @default(false)
+  sharePaise Int? // set when the order is placed
+  joinedAt   DateTime   @default(now())
+
+  @@unique([groupId, userId])
+}
+
+model GroupLine {
+  id         String     @id @default(cuid())
+  groupId    String
+  group      GroupOrder @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User       @relation(fields: [userId], references: [id])
+  menuItemId String
+  menuItem   MenuItem   @relation(fields: [menuItemId], references: [id])
+  qty        Int
+
+  @@unique([groupId, userId, menuItemId])
 }

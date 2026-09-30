@@ -69,6 +69,17 @@ export function MenuBoard({ categories, notice }: { categories: Category[]; noti
           </div>
         </div>
 
+        <Link
+          href="/group"
+          className="mb-6 flex flex-wrap items-center justify-between gap-3 border-[3px] border-ink bg-ink px-4 py-3 text-paper shadow-[5px_5px_0_0_var(--color-turmeric)] transition-transform hover:-translate-y-0.5"
+        >
+          <span>
+            <span className="block font-black">Eating with friends?</span>
+            <span className="block text-sm opacity-80">Start a table order. One token, everyone pays their own share.</span>
+          </span>
+          <span className="btn btn-sm btn-primary text-ink">Start a table</span>
+        </Link>
+
         {notice && <p className="mb-6 border-[3px] border-ink bg-turmeric-soft px-4 py-3 font-bold">{notice}</p>}
 
         {visible.length === 0 && (

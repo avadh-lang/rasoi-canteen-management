@@ -26,6 +26,20 @@ Demo accounts (password `rasoi@123` for all, or tap one on the sign-in page):
 
 `npm run db:reset` wipes everything and reloads the demo data (7 days of order history).
 
+## Signature feature: table orders with split bills
+
+Friends rarely eat alone, and splitting a canteen bill over UPI afterwards is a chore. With **table orders**:
+
+1. One student starts a table and gets a 4-letter code (no I, L or O, so it survives being shouted across the canteen). Share it on WhatsApp in one tap.
+2. Friends join with the code from their own phones. Each person adds their own dishes; everyone sees every plate update live.
+3. Each person sees their exact share, GST included, and taps **I'm in**. Changing your plate un-confirms you.
+4. The host picks a pickup slot and places **one order with one token**. In a single database transaction, stock is reserved for the combined quantities and **each person's wallet is charged only their own share**. If any friend can't cover their share, nobody is charged.
+5. If the host cancels before cooking starts, everyone gets their own share back.
+
+GST is rounded per person and the order's tax is the sum of those, so the shares always add up to the bill exactly to the paisa (`src/lib/domain/split.ts`, fully unit tested).
+
+The demo data includes an open table **`VADA`** (Diya hosting, Rohan joined): sign in as Aarav and join it.
+
 ## Features
 
 **Students and staff**
@@ -120,6 +134,7 @@ Each increment was delivered, tested and tagged in git:
 | `v0.2.0` | 2. Customer ordering | Accounts, menu, tray, checkout, token tracking, wallet |
 | `v0.3.0` | 3. Kitchen and counter | Live kitchen board, POS billing, pickup, cash top-ups |
 | `v1.0.0` | 4. Management | Dashboard analytics, menu/people/settings admin, orders, CSV, audit log |
+| `v1.1.0` | 5. Table orders | Group ordering with a shareable code, per-person split bill, per-person refunds |
 
 ```bash
 git tag -n            # list increments

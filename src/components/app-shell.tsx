@@ -9,6 +9,7 @@ import { NavLinks } from "./nav-links";
 const NAV: Record<Role, { href: string; label: string }[]> = {
   CUSTOMER: [
     { href: "/menu", label: "Menu" },
+    { href: "/group", label: "Table order" },
     { href: "/orders", label: "My orders" },
     { href: "/wallet", label: "Wallet" },
   ],
