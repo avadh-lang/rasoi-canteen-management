@@ -1,0 +1,139 @@
+// Rasoi — Canteen Management System data model.
+// Money is stored as integer paise to avoid floating point errors.
+// Role / status fields are strings validated in src/lib/domain.ts
+// (SQLite has no native enums).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String      @id @default(cuid())
+  name          String
+  email         String      @unique
+  rollNo        String?     @unique
+  passwordHash  String
+  role          String      @default("CUSTOMER") // CUSTOMER | KITCHEN | CASHIER | ADMIN
+  walletBalance Int         @default(0)
+  active        Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  orders        Order[]     @relation("customerOrders")
+  handled       Order[]     @relation("handledOrders")
+  walletTxns    WalletTxn[] @relation("walletOwner")
+  auditLogs     AuditLog[]
+}
+
+model Category {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  sortOrder Int        @default(0)
+  items     MenuItem[]
+}
+
+model MenuItem {
+  id          String      @id @default(cuid())
+  name        String
+  description String      @default("")
+  pricePaise  Int
+  isVeg       Boolean     @default(true)
+  isAvailable Boolean     @default(true)
+  stock       Int? // null = not tracked (made to order)
+  prepMinutes Int         @default(10)
+  categoryId  String
+  category    Category    @relation(fields: [categoryId], references: [id])
+  orderItems  OrderItem[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([categoryId])
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  token         Int
+  businessDate  String // YYYY-MM-DD in IST; tokens restart daily
+  channel       String // ONLINE | COUNTER
+  status        String      @default("PLACED") // PLACED | PREPARING | READY | COLLECTED | CANCELLED
+  customerName  String
+  userId        String?
+  user          User?       @relation("customerOrders", fields: [userId], references: [id])
+  handledById   String?
+  handledBy     User?       @relation("handledOrders", fields: [handledById], references: [id])
+  pickupSlot    DateTime?
+  subtotalPaise Int
+  taxPaise      Int
+  totalPaise    Int
+  paymentMethod String // WALLET | UPI | CASH
+  paymentStatus String      @default("PAID") // PAID | REFUNDED
+  paymentRef    String?
+  note          String      @default("")
+  items         OrderItem[]
+  placedAt      DateTime    @default(now())
+  preparingAt   DateTime?
+  readyAt       DateTime?
+  collectedAt   DateTime?
+  cancelledAt   DateTime?
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([businessDate, token])
+  @@index([status])
+  @@index([userId])
+  @@index([placedAt])
+}
+
+model OrderItem {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId String
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+  name       String // snapshot so renamed items don't rewrite history
+  unitPaise  Int
+  qty        Int
+  linePaise  Int
+
+  @@index([orderId])
+  @@index([menuItemId])
+}
+
+model WalletTxn {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation("walletOwner", fields: [userId], references: [id])
+  type         String // TOPUP | PAYMENT | REFUND
+  amountPaise  Int // signed: +credit, -debit
+  balanceAfter Int
+  reference    String
+  createdAt    DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  detail    String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+// Single-row table holding operating rules the admin can change at runtime.
+model CanteenSettings {
+  id              Int     @id @default(1)
+  openMinute      Int     @default(480) // minutes after IST midnight (08:00)
+  closeMinute     Int     @default(1260) // 21:00
+  slotMinutes     Int     @default(15)
+  slotCapacity    Int     @default(20)
+  acceptingOrders Boolean @default(true)
+  taxBasisPoints  Int     @default(500) // 5% GST on canteen food
+}
