@@ -6,12 +6,13 @@ Built for **2115117 Software Engineering (TE Sem V)**, developed with the **incr
 
 ## Quick start
 
-Requires Node.js 20+.
+Requires Node.js 20+ and Docker (for the local PostgreSQL).
 
 ```bash
 npm install
 cp .env.example .env          # then set SESSION_SECRET (openssl rand -base64 32)
-npm run setup                 # create the SQLite database and load demo data
+docker compose up -d          # PostgreSQL 17 on localhost:5433
+npm run setup                 # create the tables and load demo data
 npm run dev                   # http://localhost:3000
 ```
 
@@ -84,13 +85,13 @@ Browser ──▶ proxy.ts (route guard: signed session + role)
         src/lib/domain  pure business rules: order state machine, pricing + GST,
               │         pickup slots, IST time   ◀── unit tested, 100% branch coverage
               ▼
-        Prisma ──▶ SQLite (swap the datasource for PostgreSQL in production)
+        Prisma ──▶ PostgreSQL
 ```
 
 | Layer | Choice |
 |---|---|
 | Framework | Next.js 16 (App Router, Server Actions), React 19, TypeScript |
-| Data | Prisma ORM, SQLite |
+| Data | Prisma ORM, PostgreSQL 17 (Docker locally, Neon in production) |
 | Auth | bcrypt password hashes, HS256 JWT in an httpOnly cookie (`jose`) |
 | Validation | Zod on every action input |
 | UI | Tailwind CSS 4, Archivo variable font, neo-brutalist design system |
@@ -168,6 +169,6 @@ git checkout v0.2.0   # run any earlier increment
 ## Going to production
 
 - Set a strong `SESSION_SECRET`.
-- Point `DATABASE_URL` at PostgreSQL (change `provider` in `schema.prisma`) and run `npx prisma migrate deploy`.
+- Set `DATABASE_URL` (pooled) and `DATABASE_URL_UNPOOLED` (direct) to your hosted PostgreSQL; `npm run build` applies migrations.
 - Replace the simulated UPI step (`src/components/upi-sheet.tsx`) with a payment gateway, and confirm payment on the server via the gateway's webhook before placing the order.
 - The in-memory login throttle is per server instance; use Redis if you run more than one.

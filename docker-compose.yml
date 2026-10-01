@@ -1,0 +1,20 @@
+# Local PostgreSQL for development: `docker compose up -d`
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: rasoi-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rasoi
+      POSTGRES_PASSWORD: rasoi
+      POSTGRES_DB: rasoi
+    ports:
+      - "5433:5432"
+    volumes:
+      - rasoi-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rasoi"]
+      interval: 2s
+      retries: 30
+volumes:
+  rasoi-pg:

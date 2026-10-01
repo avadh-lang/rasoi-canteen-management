@@ -8,8 +8,15 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env: { POSTGRES_USER: rasoi, POSTGRES_PASSWORD: rasoi, POSTGRES_DB: rasoi }
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U rasoi" --health-interval 2s --health-retries 30
     env:
-      DATABASE_URL: file:./ci.db
+      DATABASE_URL: postgresql://rasoi:rasoi@localhost:5432/rasoi
+      DATABASE_URL_UNPOOLED: postgresql://rasoi:rasoi@localhost:5432/rasoi
       SESSION_SECRET: ci-only-secret-that-is-at-least-32-chars
     steps:
       - uses: actions/checkout@v4
@@ -21,5 +28,4 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test:coverage
-      - run: npx prisma migrate deploy
       - run: npm run build
