@@ -11,7 +11,9 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   const [{ q = "" }, me] = await Promise.all([searchParams, requireUser("ADMIN")]);
   const term = q.trim();
   const users = await db.user.findMany({
-    where: term ? { OR: [{ name: { contains: term } }, { email: { contains: term.toLowerCase() } }, { rollNo: { contains: term.toUpperCase() } }] } : {},
+    where: term
+      ? { OR: [{ name: { contains: term, mode: "insensitive" } }, { email: { contains: term, mode: "insensitive" } }, { rollNo: { contains: term, mode: "insensitive" } }] }
+      : {},
     orderBy: [{ role: "asc" }, { name: "asc" }],
     include: { _count: { select: { orders: true } } },
     take: 200,

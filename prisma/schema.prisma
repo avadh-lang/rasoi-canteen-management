@@ -1,15 +1,15 @@
 // Rasoi — Canteen Management System data model.
 // Money is stored as integer paise to avoid floating point errors.
-// Role / status fields are strings validated in src/lib/domain.ts
-// (SQLite has no native enums).
+// Role / status fields are strings validated in src/lib/domain/constants.ts.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // pooled connection for the app
+  directUrl = env("DATABASE_URL_UNPOOLED") // direct connection for migrations
 }
 
 model User {
