@@ -155,6 +155,8 @@ export async function changeStatus(orderId: string, to: OrderStatus, actor: { id
     if (!order) throw new UserFacingError("That order doesn't exist.");
 
     const from = order.status as OrderStatus;
+    // Already in the target state: another screen got there first.
+    if (from === to) throw new UserFacingError("Someone else just updated this order. Refresh to see it.");
     const check = canTransition(from, to, { role: actor.role, ownsOrder: order.userId === actor.id });
     if (!check.ok) throw new UserFacingError(check.reason);
 
